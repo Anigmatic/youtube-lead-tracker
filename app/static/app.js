@@ -6,6 +6,10 @@ const settingsForm = document.getElementById("settingsForm");
 
 const STATUS_OPTIONS = ["New", "Contacted", "Replied", "Not Interested", "Closed"];
 const OUTREACH_OPTIONS = ["Email", "YouTube Comment", "Instagram DM", "Other"];
+const LANGUAGE_OPTIONS = [
+  "English", "Unknown", "Spanish", "Portuguese", "French", "German",
+  "Hindi", "Arabic", "Japanese", "Korean", "Chinese", "Other",
+];
 
 function escapeHtml(value) {
   const div = document.createElement("div");
@@ -28,7 +32,7 @@ function renderRow(lead) {
 
   tr.innerHTML = `
     <td>${escapeHtml(lead.date || "")}</td>
-    <td>${escapeHtml(lead.language || "")}</td>
+    <td class="language-cell"></td>
     <td>${nameCell}</td>
     <td>${escapeHtml(lead.subscriber_count_display || "")}</td>
     <td>${escapeHtml(lead.avg_views_display || "")}</td>
@@ -38,6 +42,17 @@ function renderRow(lead) {
     <td class="outreach-cell"></td>
     <td class="notes-cell"><input type="text" value="${escapeHtml(lead.notes || "")}"></td>
   `;
+
+  const languageSelect = document.createElement("select");
+  LANGUAGE_OPTIONS.forEach((opt) => {
+    const o = document.createElement("option");
+    o.value = opt;
+    o.textContent = opt;
+    if (opt === lead.language) o.selected = true;
+    languageSelect.appendChild(o);
+  });
+  languageSelect.addEventListener("change", () => patchLead(lead.id, { language: languageSelect.value }));
+  tr.querySelector(".language-cell").appendChild(languageSelect);
 
   const statusSelect = document.createElement("select");
   STATUS_OPTIONS.forEach((opt) => {
