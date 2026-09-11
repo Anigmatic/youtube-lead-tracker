@@ -7,25 +7,36 @@ const settingsForm = document.getElementById("settingsForm");
 const STATUS_OPTIONS = ["New", "Contacted", "Replied", "Not Interested", "Closed"];
 const OUTREACH_OPTIONS = ["Email", "YouTube Comment", "Instagram DM", "Other"];
 
+function escapeHtml(value) {
+  const div = document.createElement("div");
+  div.textContent = value == null ? "" : String(value);
+  // div.innerHTML (per the HTML fragment serialization spec) only escapes
+  // &, <, > (and nbsp) on a text node — it does NOT escape quote
+  // characters. Since several call sites below interpolate into a
+  // double-quoted HTML attribute (value="${...}"), quotes must be escaped
+  // explicitly or a value containing `"` could break out of the attribute.
+  return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function renderRow(lead) {
   const tr = document.createElement("tr");
   tr.dataset.fit = lead.fit_assessment || "";
   tr.dataset.id = lead.id;
 
-  const nameCell = `<a href="${lead.channel_url}" target="_blank">${lead.name || lead.channel_url}</a>`;
-  const fitCell = `${lead.fit_assessment || ""} - ${lead.fit_reason || ""}`;
+  const nameCell = `<a href="${escapeHtml(lead.channel_url)}" target="_blank">${escapeHtml(lead.name || lead.channel_url)}</a>`;
+  const fitCell = `${escapeHtml(lead.fit_assessment || "")} - ${escapeHtml(lead.fit_reason || "")}`;
 
   tr.innerHTML = `
-    <td>${lead.date || ""}</td>
-    <td>${lead.language || ""}</td>
+    <td>${escapeHtml(lead.date || "")}</td>
+    <td>${escapeHtml(lead.language || "")}</td>
     <td>${nameCell}</td>
-    <td>${lead.subscriber_count_display || ""}</td>
-    <td>${lead.avg_views_display || ""}</td>
-    <td>${lead.contact_info || ""}</td>
+    <td>${escapeHtml(lead.subscriber_count_display || "")}</td>
+    <td>${escapeHtml(lead.avg_views_display || "")}</td>
+    <td>${escapeHtml(lead.contact_info || "")}</td>
     <td class="fit">${fitCell}</td>
     <td class="status-cell"></td>
     <td class="outreach-cell"></td>
-    <td class="notes-cell"><input type="text" value="${lead.notes || ""}"></td>
+    <td class="notes-cell"><input type="text" value="${escapeHtml(lead.notes || "")}"></td>
   `;
 
   const statusSelect = document.createElement("select");
