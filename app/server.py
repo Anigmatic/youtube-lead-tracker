@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, g, jsonify, request, send_file
 
 from . import db
 from .channel_resolver import resolve_channel
@@ -14,8 +14,21 @@ STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 def create_app(db_path: str) -> Flask:
     app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
-    conn = db.get_connection(db_path)
-    db.init_db(conn)
+
+    startup_conn = db.get_connection(db_path)
+    db.init_db(startup_conn)
+    startup_conn.close()
+
+    def get_conn():
+        if "db_conn" not in g:
+            g.db_conn = db.get_connection(db_path)
+        return g.db_conn
+
+    @app.teardown_appcontext
+    def close_conn(exception=None):
+        conn = g.pop("db_conn", None)
+        if conn is not None:
+            conn.close()
 
     @app.route("/")
     def index():
@@ -23,24 +36,29 @@ def create_app(db_path: str) -> Flask:
 
     @app.route("/api/settings", methods=["GET"])
     def get_settings_route():
+        conn = get_conn()
         return jsonify(db.get_settings(conn))
 
     @app.route("/api/settings", methods=["POST"])
     def save_settings_route():
+        conn = get_conn()
         db.save_settings(conn, request.get_json(force=True) or {})
         return jsonify(db.get_settings(conn))
 
     @app.route("/api/leads", methods=["GET"])
     def list_leads_route():
+        conn = get_conn()
         return jsonify(db.list_leads(conn))
 
     @app.route("/api/leads/<int:lead_id>", methods=["PATCH"])
     def update_lead_route(lead_id):
+        conn = get_conn()
         db.update_lead_fields(conn, lead_id, request.get_json(force=True) or {})
         return jsonify({"ok": True})
 
     @app.route("/api/channels", methods=["POST"])
     def submit_channels_route():
+        conn = get_conn()
         body = request.get_json(force=True) or {}
         inputs = [s.strip() for s in body.get("inputs", []) if s.strip()]
         config = db.get_settings(conn)
@@ -78,6 +96,7 @@ def create_app(db_path: str) -> Flask:
 
     @app.route("/api/export")
     def export_route():
+        conn = get_conn()
         fmt = request.args.get("format", "xlsx")
         leads = db.list_leads(conn)
         suffix = ".xlsx" if fmt == "xlsx" else ".csv"

@@ -1,3 +1,4 @@
+import threading
 from unittest.mock import patch
 
 import pytest
@@ -92,3 +93,26 @@ def test_export_route_returns_downloadable_file(client):
     resp = client.get("/api/export?format=csv")
     assert resp.status_code == 200
     assert resp.headers["Content-Disposition"].startswith("attachment")
+
+
+def test_leads_endpoint_works_across_real_threads(tmp_path):
+    app = create_app(str(tmp_path / "thread_test.db"))
+    client = app.test_client()
+    results = []
+    errors = []
+
+    def worker():
+        try:
+            resp = client.get("/api/leads")
+            results.append(resp.status_code)
+        except Exception as e:
+            errors.append(e)
+
+    threads = [threading.Thread(target=worker) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert errors == []
+    assert results == [200, 200, 200, 200]
