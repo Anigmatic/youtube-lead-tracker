@@ -131,3 +131,32 @@ def test_parse_relative_age_days(text, expected_days):
 
 def test_parse_relative_age_days_returns_large_number_when_unparseable():
     assert parse_relative_age_days("Premiered") >= 9999
+
+
+from unittest.mock import patch, MagicMock
+
+from app.scraper import fetch_html, scrape_channel
+
+
+def test_fetch_html_returns_response_text():
+    fake_response = MagicMock()
+    fake_response.text = "<html>ok</html>"
+    fake_response.raise_for_status = MagicMock()
+    with patch("app.scraper.requests.get", return_value=fake_response) as mock_get:
+        result = fetch_html("https://www.youtube.com/@testchannel/about")
+    assert result == "<html>ok</html>"
+    assert mock_get.call_args.kwargs["headers"]["User-Agent"]
+
+
+def test_scrape_channel_combines_about_and_videos():
+    about_html = _load_fixture("about_page.html")
+    videos_html = _load_fixture("videos_page.html")
+
+    def fake_fetch(url):
+        return about_html if url.endswith("/about") else videos_html
+
+    with patch("app.scraper.fetch_html", side_effect=fake_fetch):
+        result = scrape_channel("@testchannel")
+
+    assert result["about"]["name"] == "Test Channel"
+    assert len(result["videos"]) == 3

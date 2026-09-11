@@ -1,6 +1,16 @@
 import json
 import re
 
+import requests
+
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
 
 class ScrapeError(Exception):
     pass
@@ -195,3 +205,16 @@ def parse_relative_age_days(text: str) -> int:
         return 10_000
     count, unit = match.groups()
     return int(count) * _AGE_UNIT_DAYS[unit.lower()]
+
+
+def fetch_html(url: str) -> str:
+    resp = requests.get(url, headers=_HEADERS, timeout=15)
+    resp.raise_for_status()
+    return resp.text
+
+
+def scrape_channel(input_str: str, max_videos: int = 10) -> dict:
+    urls = normalize_channel_input(input_str)
+    about = parse_about_page(extract_yt_initial_data(fetch_html(urls["about_url"])))
+    videos = parse_videos_page(extract_yt_initial_data(fetch_html(urls["videos_url"])), max_videos=max_videos)
+    return {"about": about, "videos": videos}
