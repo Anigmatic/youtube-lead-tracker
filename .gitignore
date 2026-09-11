@@ -1,0 +1,7 @@
+.superpowers/
+__pycache__/
+*.pyc
+*.db
+build/
+dist/
+*.spec.bak
