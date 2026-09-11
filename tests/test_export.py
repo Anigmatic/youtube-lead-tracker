@@ -34,3 +34,35 @@ def test_export_xlsx_writes_header_and_rows(tmp_path):
     data_row = [cell.value for cell in ws[2]]
     assert header[0] == "Date"
     assert "Test Channel" in data_row
+
+
+_FORMULA_LEADS = [
+    {
+        "date": "2026-09-11", "language": "English",
+        "name": '=HYPERLINK("http://evil.test","Claim prize")',
+        "channel_url": "https://www.youtube.com/@evil",
+        "subscriber_count_display": "5.65K", "avg_views_display": "1.5K-4.1K",
+        "contact_info": "contact@testchannel.com", "fit_assessment": "High",
+        "fit_reason": "Matches niche.", "status": "New", "outreach_method": "Email", "notes": "",
+    },
+]
+
+
+def test_export_csv_escapes_formula_injection_in_name(tmp_path):
+    path = tmp_path / "leads.csv"
+    export_csv(_FORMULA_LEADS, str(path))
+    with open(path, newline="", encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+    name_cell = rows[1][2]
+    assert name_cell.startswith("'=")
+    assert not name_cell.startswith("=")
+
+
+def test_export_xlsx_escapes_formula_injection_in_name(tmp_path):
+    path = tmp_path / "leads.xlsx"
+    export_xlsx(_FORMULA_LEADS, str(path))
+    wb = openpyxl.load_workbook(path)
+    ws = wb.active
+    name_cell = ws[2][2].value
+    assert name_cell.startswith("'=")
+    assert not name_cell.startswith("=")
