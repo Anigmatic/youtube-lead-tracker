@@ -1,7 +1,7 @@
 import pytest
 import os
 
-from app.scraper import normalize_channel_input, extract_yt_initial_data, ScrapeError, parse_about_page, extract_contact_info, guess_language
+from app.scraper import normalize_channel_input, extract_yt_initial_data, ScrapeError, parse_about_page, extract_contact_info, guess_language, parse_videos_page, parse_relative_age_days
 
 
 @pytest.mark.parametrize("input_str,expected_about,expected_videos", [
@@ -89,3 +89,45 @@ def test_guess_language_defaults_to_english_for_ascii_text():
 
 def test_guess_language_returns_unknown_for_non_ascii_text():
     assert guess_language("これは日本語の説明です") == "Unknown"
+
+
+def test_parse_videos_page_extracts_recent_videos_in_order():
+    html = _load_fixture("videos_page.html")
+    data = extract_yt_initial_data(html)
+    videos = parse_videos_page(data)
+    assert len(videos) == 3
+    assert videos[0] == {
+        "video_id": "vid001",
+        "title": "First Video",
+        "view_count_text": "4.1K views",
+        "published_text": "2 days ago",
+    }
+    assert videos[1]["view_count_text"] == "1.5K views"
+    assert videos[2]["published_text"] == "3 months ago"
+
+
+def test_parse_videos_page_respects_max_videos():
+    html = _load_fixture("videos_page.html")
+    data = extract_yt_initial_data(html)
+    videos = parse_videos_page(data, max_videos=2)
+    assert len(videos) == 2
+
+
+def test_parse_videos_page_raises_when_videos_tab_missing():
+    with pytest.raises(ScrapeError):
+        parse_videos_page({"contents": {"twoColumnBrowseResultsRenderer": {"tabs": []}}})
+
+
+@pytest.mark.parametrize("text,expected_days", [
+    ("2 days ago", 2),
+    ("1 week ago", 7),
+    ("3 months ago", 90),
+    ("1 year ago", 365),
+    ("5 hours ago", 0),
+])
+def test_parse_relative_age_days(text, expected_days):
+    assert parse_relative_age_days(text) == expected_days
+
+
+def test_parse_relative_age_days_returns_large_number_when_unparseable():
+    assert parse_relative_age_days("Premiered") >= 9999
