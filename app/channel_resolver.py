@@ -21,6 +21,7 @@ class ChannelData:
     language: str = "Unknown"
     latest_upload_age_days: int = 10_000
     data_source: str = "scrape"
+    partial: bool = False
     error: str = None
 
 
@@ -60,7 +61,7 @@ def resolve_channel(input_str: str, config: dict) -> ChannelData:
             if api_views:
                 views_for_avg = api_views
             data_source = "api"
-        except YouTubeAPIError:
+        except (YouTubeAPIError, requests.RequestException):
             pass
 
     if views_for_avg:
@@ -83,4 +84,5 @@ def resolve_channel(input_str: str, config: dict) -> ChannelData:
         language=guess_language(about["description"]),
         latest_upload_age_days=latest_upload_age_days,
         data_source=data_source,
+        partial=scraped.get("partial", False),
     )

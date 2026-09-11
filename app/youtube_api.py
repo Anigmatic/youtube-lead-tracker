@@ -20,7 +20,7 @@ def get_channel_stats(api_key: str, channel_id: str) -> dict:
     items = data.get("items", [])
     if not items:
         raise YouTubeAPIError(f"No channel found for id {channel_id}")
-    return {"subscriber_count": int(items[0]["statistics"]["subscriberCount"])}
+    return {"subscriber_count": int(items[0].get("statistics", {}).get("subscriberCount", 0))}
 
 
 def _get_uploads_playlist_id(api_key: str, channel_id: str) -> str:

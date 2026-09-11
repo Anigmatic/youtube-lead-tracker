@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+import requests
+
 from app.channel_resolver import resolve_channel, ChannelData
 from app.youtube_api import YouTubeAPIError
 
@@ -76,3 +78,36 @@ def test_resolve_channel_handles_no_videos_found():
         result = resolve_channel("@testchannel", _CONFIG)
     assert result.avg_views_display == "N/A"
     assert result.latest_upload_age_days == 10_000
+
+
+def test_resolve_channel_falls_back_to_scrape_data_when_api_raises_youtube_api_error():
+    config = {"youtube_api_key": "fake-key"}
+    with _patch_scrape(), \
+         patch("app.channel_resolver.get_channel_stats", side_effect=YouTubeAPIError("quota exceeded")):
+        result = resolve_channel("@testchannel", config)
+    assert result.error is None
+    assert result.data_source == "scrape"
+    assert result.subscriber_count == 12_300
+
+
+def test_resolve_channel_falls_back_to_scrape_data_when_api_raises_connection_error():
+    config = {"youtube_api_key": "fake-key"}
+    with _patch_scrape(), \
+         patch("app.channel_resolver.get_channel_stats", side_effect=requests.ConnectionError("boom")):
+        result = resolve_channel("@testchannel", config)
+    assert result.error is None
+    assert result.data_source == "scrape"
+    assert result.subscriber_count == 12_300
+
+
+def test_resolve_channel_returns_partial_true_when_videos_scrape_is_partial():
+    about = dict(_ABOUT)
+    with patch(
+        "app.channel_resolver.scrape_channel",
+        return_value={"about": about, "videos": [], "partial": True},
+    ):
+        result = resolve_channel("@testchannel", _CONFIG)
+    assert result.error is None
+    assert result.name == "Test Channel"
+    assert result.subscriber_count == 12_300
+    assert result.partial is True

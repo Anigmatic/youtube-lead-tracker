@@ -64,30 +64,40 @@ def create_app(db_path: str) -> Flask:
         config = db.get_settings(conn)
         results = []
         for raw_input in inputs:
-            channel = resolve_channel(raw_input, config)
-            if channel.error:
+            try:
+                channel = resolve_channel(raw_input, config)
+                if channel.error:
+                    lead = {
+                        "channel_url": raw_input,
+                        "name": raw_input,
+                        "fit_reason": f"Could not resolve channel: {channel.error}",
+                    }
+                else:
+                    try:
+                        level, reason = score_fit_llm(channel, config)
+                    except Exception:
+                        level, reason = score_fit_rule_based(channel, config)
+                    if channel.partial:
+                        reason = f"{reason} (could not fully verify recent video stats)"
+                    lead = {
+                        "language": channel.language,
+                        "name": channel.name,
+                        "channel_url": channel.channel_url,
+                        "subscriber_count": channel.subscriber_count,
+                        "subscriber_count_display": channel.subscriber_count_display,
+                        "avg_views_min": channel.avg_views_min,
+                        "avg_views_max": channel.avg_views_max,
+                        "avg_views_display": channel.avg_views_display,
+                        "contact_info": channel.contact_info,
+                        "fit_assessment": level,
+                        "fit_reason": reason,
+                        "status": "New",
+                    }
+            except Exception as e:
                 lead = {
                     "channel_url": raw_input,
                     "name": raw_input,
-                    "fit_reason": f"Could not resolve channel: {channel.error}",
-                }
-            else:
-                try:
-                    level, reason = score_fit_llm(channel, config)
-                except Exception:
-                    level, reason = score_fit_rule_based(channel, config)
-                lead = {
-                    "language": channel.language,
-                    "name": channel.name,
-                    "channel_url": channel.channel_url,
-                    "subscriber_count": channel.subscriber_count,
-                    "subscriber_count_display": channel.subscriber_count_display,
-                    "avg_views_min": channel.avg_views_min,
-                    "avg_views_max": channel.avg_views_max,
-                    "avg_views_display": channel.avg_views_display,
-                    "contact_info": channel.contact_info,
-                    "fit_assessment": level,
-                    "fit_reason": reason,
+                    "fit_reason": f"Could not resolve channel: {e}",
                 }
             lead_id = db.upsert_lead(conn, lead)
             row = conn.execute("SELECT * FROM leads WHERE id = ?", (lead_id,)).fetchone()

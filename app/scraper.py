@@ -216,5 +216,8 @@ def fetch_html(url: str) -> str:
 def scrape_channel(input_str: str, max_videos: int = 10) -> dict:
     urls = normalize_channel_input(input_str)
     about = parse_about_page(extract_yt_initial_data(fetch_html(urls["about_url"])))
-    videos = parse_videos_page(extract_yt_initial_data(fetch_html(urls["videos_url"])), max_videos=max_videos)
+    try:
+        videos = parse_videos_page(extract_yt_initial_data(fetch_html(urls["videos_url"])), max_videos=max_videos)
+    except ScrapeError:
+        return {"about": about, "videos": [], "partial": True}
     return {"about": about, "videos": videos}

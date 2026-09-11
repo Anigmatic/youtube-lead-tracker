@@ -19,6 +19,13 @@ def test_get_channel_stats_returns_subscriber_count():
     assert result == {"subscriber_count": 21_200_000}
 
 
+def test_get_channel_stats_defaults_to_zero_when_subscriber_count_hidden():
+    payload = {"items": [{"statistics": {"hiddenSubscriberCount": True}}]}
+    with patch("app.youtube_api.requests.get", return_value=_mock_response(payload)):
+        result = get_channel_stats("fake-key", "UCtest")
+    assert result == {"subscriber_count": 0}
+
+
 def test_get_channel_stats_raises_when_channel_not_found():
     with patch("app.youtube_api.requests.get", return_value=_mock_response({"items": []})):
         with pytest.raises(YouTubeAPIError):

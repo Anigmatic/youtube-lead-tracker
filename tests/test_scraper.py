@@ -160,3 +160,18 @@ def test_scrape_channel_combines_about_and_videos():
 
     assert result["about"]["name"] == "Test Channel"
     assert len(result["videos"]) == 3
+
+
+def test_scrape_channel_returns_partial_when_videos_tab_fails_to_parse():
+    about_html = _load_fixture("about_page.html")
+    no_videos_marker_html = "<html><body>no ytInitialData here</body></html>"
+
+    def fake_fetch(url):
+        return about_html if url.endswith("/about") else no_videos_marker_html
+
+    with patch("app.scraper.fetch_html", side_effect=fake_fetch):
+        result = scrape_channel("@testchannel")
+
+    assert result["about"]["name"] == "Test Channel"
+    assert result["videos"] == []
+    assert result["partial"] is True

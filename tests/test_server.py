@@ -69,6 +69,42 @@ def test_submit_channels_records_error_row_when_resolution_fails(client):
     assert "Could not resolve channel" in body[0]["fit_reason"]
 
 
+def test_submit_channels_continues_batch_when_one_input_raises(client):
+    good_channel_1 = ChannelData(name="Good 1", channel_url="https://www.youtube.com/@good1")
+    good_channel_2 = ChannelData(name="Good 2", channel_url="https://www.youtube.com/@good2")
+
+    with patch(
+        "app.server.resolve_channel",
+        side_effect=[good_channel_1, ConnectionError("boom"), good_channel_2],
+    ), patch("app.server.score_fit_llm", side_effect=Exception("no key")):
+        resp = client.post(
+            "/api/channels",
+            json={"inputs": ["@good1", "@badone", "@good2"]},
+        )
+
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert len(body) == 3
+    assert body[0]["name"] == "Good 1"
+    assert "Could not resolve channel:" in body[1]["fit_reason"]
+    assert body[2]["name"] == "Good 2"
+
+    leads = client.get("/api/leads").get_json()
+    assert len(leads) == 3
+
+
+def test_submit_channels_sets_status_new_for_successfully_resolved_lead(client):
+    channel = ChannelData(name="X", channel_url="https://www.youtube.com/@x")
+    with patch("app.server.resolve_channel", return_value=channel), \
+         patch("app.server.score_fit_llm", side_effect=Exception("no key")):
+        resp = client.post("/api/channels", json={"inputs": ["@x"]})
+    body = resp.get_json()
+    assert body[0]["status"] == "New"
+
+    leads = client.get("/api/leads").get_json()
+    assert leads[0]["status"] == "New"
+
+
 def test_patch_lead_updates_editable_fields(client):
     channel = ChannelData(name="X", channel_url="https://www.youtube.com/@x")
     with patch("app.server.resolve_channel", return_value=channel), \
