@@ -36,6 +36,16 @@ def test_export_xlsx_writes_header_and_rows(tmp_path):
     assert "Test Channel" in data_row
 
 
+def test_export_csv_includes_links_column(tmp_path):
+    leads = [dict(_LEADS[0], links="site.com, twitter.com/test, patreon.com/test")]
+    path = tmp_path / "leads.csv"
+    export_csv(leads, str(path))
+    with open(path, newline="", encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+    assert "Links" in rows[0]
+    assert "site.com, twitter.com/test, patreon.com/test" in rows[1]
+
+
 _FORMULA_LEADS = [
     {
         "date": "2026-09-11", "language": "English",

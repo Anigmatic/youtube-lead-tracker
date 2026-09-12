@@ -19,7 +19,7 @@ _LEAD_COLUMNS = [
     "date", "language", "name", "channel_url",
     "subscriber_count", "subscriber_count_display",
     "avg_views_min", "avg_views_max", "avg_views_display",
-    "contact_info", "fit_assessment", "fit_reason",
+    "contact_info", "links", "fit_assessment", "fit_reason",
     "status", "outreach_method", "notes",
 ]
 
@@ -46,6 +46,7 @@ def init_db(conn: sqlite3.Connection) -> None:
             avg_views_max INTEGER NOT NULL DEFAULT 0,
             avg_views_display TEXT NOT NULL DEFAULT '',
             contact_info TEXT NOT NULL DEFAULT '',
+            links TEXT NOT NULL DEFAULT '',
             fit_assessment TEXT NOT NULL DEFAULT '',
             fit_reason TEXT NOT NULL DEFAULT '',
             status TEXT NOT NULL DEFAULT '',
@@ -53,6 +54,7 @@ def init_db(conn: sqlite3.Connection) -> None:
             notes TEXT NOT NULL DEFAULT ''
         )
     """)
+    _ensure_column(conn, "leads", "links", "TEXT NOT NULL DEFAULT ''")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS settings (
             id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -60,6 +62,14 @@ def init_db(conn: sqlite3.Connection) -> None:
         )
     """)
     conn.commit()
+
+
+def _ensure_column(conn: sqlite3.Connection, table: str, column: str, ddl: str) -> None:
+    """Add a column to an existing table if it's missing, so a leads.db
+    created before this column existed still upgrades cleanly."""
+    existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    if column not in existing:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
 
 
 def upsert_lead(conn: sqlite3.Connection, lead: dict) -> int:

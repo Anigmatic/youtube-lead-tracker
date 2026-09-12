@@ -44,6 +44,7 @@ def test_submit_channels_resolves_and_scores_and_stores(client):
         avg_views_max=4100,
         avg_views_display="1.5K-4.1K",
         contact_info="aigrowthintegrator.com/yt",
+        links=["aigrowthintegrator.com/yt", "twitter.com/aigrowth"],
         language="English",
         latest_upload_age_days=5,
     )
@@ -55,6 +56,7 @@ def test_submit_channels_resolves_and_scores_and_stores(client):
     assert len(body) == 1
     assert body[0]["name"] == "AI Growth Integrator"
     assert body[0]["fit_assessment"] in {"High", "Moderate", "Low"}
+    assert body[0]["links"] == "aigrowthintegrator.com/yt, twitter.com/aigrowth"
 
     leads = client.get("/api/leads").get_json()
     assert len(leads) == 1

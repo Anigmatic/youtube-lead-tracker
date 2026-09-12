@@ -89,6 +89,7 @@ def create_app(db_path: str) -> Flask:
                         "avg_views_max": channel.avg_views_max,
                         "avg_views_display": channel.avg_views_display,
                         "contact_info": channel.contact_info,
+                        "links": ", ".join(channel.links),
                         "fit_assessment": level,
                         "fit_reason": reason,
                         "status": "New",

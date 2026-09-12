@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import requests
 
@@ -18,6 +18,7 @@ class ChannelData:
     avg_views_max: int = 0
     avg_views_display: str = "N/A"
     contact_info: str = "No clear contact"
+    links: list = field(default_factory=list)
     language: str = "Unknown"
     latest_upload_age_days: int = 10_000
     data_source: str = "scrape"
@@ -81,6 +82,7 @@ def resolve_channel(input_str: str, config: dict) -> ChannelData:
         avg_views_max=avg_max,
         avg_views_display=avg_display,
         contact_info=extract_contact_info(about["description"], about.get("links")),
+        links=about.get("links") or [],
         language=guess_language(about["description"]),
         latest_upload_age_days=latest_upload_age_days,
         data_source=data_source,

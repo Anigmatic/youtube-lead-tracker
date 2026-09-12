@@ -107,6 +107,13 @@ def test_resolve_channel_uses_structured_links_when_description_has_no_contact()
     with _patch_scrape(about=about):
         result = resolve_channel("@testchannel", _CONFIG)
     assert result.contact_info == "testchannel.com"
+    assert result.links == ["testchannel.com", "twitter.com/testchannel"]
+
+
+def test_resolve_channel_links_defaults_to_empty_list_when_none_found():
+    with _patch_scrape():
+        result = resolve_channel("@testchannel", _CONFIG)
+    assert result.links == []
 
 
 def test_resolve_channel_returns_partial_true_when_videos_scrape_is_partial():

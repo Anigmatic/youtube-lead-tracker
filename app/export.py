@@ -12,6 +12,7 @@ _COLUMNS = [
     ("subscriber_count_display", "Subscriber Count"),
     ("avg_views_display", "Avg Views/Video"),
     ("contact_info", "Contact Info"),
+    ("links", "Links"),
     ("fit_assessment", "Fit Assessment"),
     ("fit_reason", "Fit Reason"),
     ("status", "Status"),

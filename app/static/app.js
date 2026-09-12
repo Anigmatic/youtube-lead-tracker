@@ -37,6 +37,7 @@ function renderRow(lead) {
     <td>${escapeHtml(lead.subscriber_count_display || "")}</td>
     <td>${escapeHtml(lead.avg_views_display || "")}</td>
     <td>${escapeHtml(lead.contact_info || "")}</td>
+    <td>${escapeHtml(lead.links || "")}</td>
     <td class="fit">${fitCell}</td>
     <td class="status-cell"></td>
     <td class="outreach-cell"></td>

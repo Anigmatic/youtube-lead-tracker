@@ -49,6 +49,39 @@ def test_get_settings_returns_defaults_when_unset(conn):
     assert "New" in settings["status_options"]
 
 
+def test_upsert_lead_stores_links_column(conn):
+    db.upsert_lead(conn, {
+        "channel_url": "https://www.youtube.com/@z",
+        "name": "Z",
+        "links": "site.com, twitter.com/z, patreon.com/z",
+    })
+    leads = db.list_leads(conn)
+    assert leads[0]["links"] == "site.com, twitter.com/z, patreon.com/z"
+
+
+def test_init_db_adds_links_column_to_pre_existing_leads_table(tmp_path):
+    db_path = str(tmp_path / "legacy.db")
+    legacy_conn = db.get_connection(db_path)
+    legacy_conn.execute("""
+        CREATE TABLE leads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL DEFAULT '',
+            channel_url TEXT NOT NULL UNIQUE
+        )
+    """)
+    legacy_conn.execute(
+        "INSERT INTO leads (date, channel_url) VALUES ('2026-01-01', 'https://www.youtube.com/@legacy')"
+    )
+    legacy_conn.commit()
+    legacy_conn.close()
+
+    upgraded_conn = db.get_connection(db_path)
+    db.init_db(upgraded_conn)
+    leads = db.list_leads(upgraded_conn)
+    assert leads[0]["links"] == ""
+    upgraded_conn.close()
+
+
 def test_save_settings_merges_into_existing(conn):
     db.save_settings(conn, {"niche_keywords": ["ai", "smma"]})
     db.save_settings(conn, {"youtube_api_key": "abc123"})
