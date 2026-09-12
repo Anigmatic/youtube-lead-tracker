@@ -46,6 +46,40 @@ Two options, from a folder containing this project:
   `build.bat`, just for macOS/Linux). Output goes to
   `dist/YouTubeLeadTracker`.
 
+## Downloads (no build required)
+
+Every tagged release automatically builds and attaches a Windows `.exe` and
+a macOS binary via GitHub Actions — grab the one for your OS from the
+[Releases page](https://github.com/Anigmatic/youtube-lead-tracker/releases)
+instead of building from source.
+
+## Running it as a live URL (for yourself, privately)
+
+This app is a **personal, single-user tool** — one SQLite file holds all
+leads and any API keys you configure, with no login. Only deploy it to a
+URL you keep private; don't share the link, since anyone with it can see
+and edit everything (including your Settings/API keys) with no
+authentication in front of it.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Anigmatic/youtube-lead-tracker)
+
+That button uses `render.yaml` in this repo to set itself up. A few things
+worth knowing about Render's **free** tier specifically:
+
+- The service sleeps after 15 minutes of inactivity and takes ~30-50s to
+  wake back up on your next visit. Normal for a personal tool, not built
+  for someone waiting on it live.
+- Its disk is **ephemeral** — `leads.db` survives while the same instance
+  stays up, but a fresh deploy (e.g. you push a code update) or Render
+  recycling the instance wipes it. Export your leads (the Export button)
+  before pushing updates if you don't want to lose them. If this matters to
+  you, look at Render's paid persistent disks, or Fly.io's free persistent
+  volume, instead.
+- `wsgi.py` is the entrypoint used here (not `main.py`, which is only for
+  the local/desktop exe). It reads `LEADS_DB_PATH` from the environment if
+  you want the database to live somewhere other than next to `wsgi.py`
+  (e.g. a mounted persistent disk).
+
 ## API keys (optional)
 
 The app works out of the box with zero configuration: it scrapes channel

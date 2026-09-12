@@ -1,0 +1,47 @@
+name: Build release binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_path: dist/YouTubeLeadTracker.exe
+            asset_name: YouTubeLeadTracker-windows.exe
+          - os: macos-latest
+            artifact_path: dist/YouTubeLeadTracker
+            asset_name: YouTubeLeadTracker-macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: pytest
+
+      - name: Build standalone binary
+        run: pyinstaller build.spec --noconfirm
+
+      - name: Rename artifact for this platform
+        shell: bash
+        run: cp "${{ matrix.artifact_path }}" "${{ matrix.asset_name }}"
+
+      - name: Attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset_name }}
