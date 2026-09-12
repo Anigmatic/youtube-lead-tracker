@@ -118,13 +118,51 @@ def parse_about_page(data: dict) -> dict:
         "channel_url": cmr.get("channelUrl") or f"https://www.youtube.com/channel/{channel_id}",
         "subscriber_count_text": subscriber_count_text,
         "description": cmr.get("description", ""),
+        "links": _extract_about_links(data),
     }
 
 
-def extract_contact_info(description: str) -> str:
+def _extract_about_links(data: dict) -> list:
+    """Find the About panel's structured external links (website/social),
+    shown as the "Links" section in YouTube's About popup. These live in a
+    separate part of the page data from the description text, so a channel
+    can have real, curated contact links even when its description contains
+    no email or URL at all."""
+    found = []
+
+    def walk(obj):
+        if found:
+            return
+        if isinstance(obj, dict):
+            about_vm = obj.get("aboutChannelViewModel")
+            if isinstance(about_vm, dict) and about_vm.get("links"):
+                found.append(about_vm["links"])
+                return
+            for value in obj.values():
+                walk(value)
+        elif isinstance(obj, list):
+            for item in obj:
+                walk(item)
+
+    walk(data)
+    if not found:
+        return []
+
+    contents = []
+    for item in found[0]:
+        vm = item.get("channelExternalLinkViewModel", {})
+        content = vm.get("link", {}).get("content", "")
+        if content:
+            contents.append(content)
+    return contents
+
+
+def extract_contact_info(description: str, links: list = None) -> str:
     email_match = _EMAIL_RE.search(description)
     if email_match:
         return email_match.group(0)
+    if links:
+        return links[0]
     for line in description.splitlines():
         line = line.strip()
         if not line or "youtube.com" in line.lower():

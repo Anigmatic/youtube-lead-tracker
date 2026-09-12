@@ -100,6 +100,15 @@ def test_resolve_channel_falls_back_to_scrape_data_when_api_raises_connection_er
     assert result.subscriber_count == 12_300
 
 
+def test_resolve_channel_uses_structured_links_when_description_has_no_contact():
+    about = dict(_ABOUT)
+    about["description"] = "We make videos about testing things. No contact info here."
+    about["links"] = ["testchannel.com", "twitter.com/testchannel"]
+    with _patch_scrape(about=about):
+        result = resolve_channel("@testchannel", _CONFIG)
+    assert result.contact_info == "testchannel.com"
+
+
 def test_resolve_channel_returns_partial_true_when_videos_scrape_is_partial():
     about = dict(_ABOUT)
     with patch(

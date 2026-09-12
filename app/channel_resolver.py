@@ -80,7 +80,7 @@ def resolve_channel(input_str: str, config: dict) -> ChannelData:
         avg_views_min=avg_min,
         avg_views_max=avg_max,
         avg_views_display=avg_display,
-        contact_info=extract_contact_info(about["description"]),
+        contact_info=extract_contact_info(about["description"], about.get("links")),
         language=guess_language(about["description"]),
         latest_upload_age_days=latest_upload_age_days,
         data_source=data_source,

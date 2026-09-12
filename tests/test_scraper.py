@@ -69,6 +69,22 @@ def test_parse_about_page_raises_on_missing_metadata():
         parse_about_page({"metadata": {}})
 
 
+def test_parse_about_page_has_no_links_when_none_present():
+    html = _load_fixture("about_page.html")
+    data = extract_yt_initial_data(html)
+    about = parse_about_page(data)
+    assert about["links"] == []
+
+
+def test_parse_about_page_extracts_structured_links_section():
+    html = _load_fixture("about_page_with_links.html")
+    data = extract_yt_initial_data(html)
+    about = parse_about_page(data)
+    assert about["links"] == ["testchannel.com", "twitter.com/testchannel"]
+    assert about["name"] == "Test Channel"
+    assert about["subscriber_count_text"] == "5.65K subscribers"
+
+
 def test_extract_contact_info_finds_email():
     assert extract_contact_info("Reach me at hello@example.com for business.") == "hello@example.com"
 
@@ -81,6 +97,18 @@ def test_extract_contact_info_falls_back_to_url_when_no_email():
 def test_extract_contact_info_ignores_youtube_links_and_returns_default():
     description = "Subscribe here: youtube.com/@testchannel\nNo other links."
     assert extract_contact_info(description) == "No clear contact"
+
+
+def test_extract_contact_info_uses_structured_links_when_description_has_none():
+    description = "We make videos about testing things. No contact info here."
+    links = ["testchannel.com", "twitter.com/testchannel"]
+    assert extract_contact_info(description, links) == "testchannel.com"
+
+
+def test_extract_contact_info_prefers_email_over_structured_links():
+    description = "Reach me at hello@example.com for business."
+    links = ["testchannel.com"]
+    assert extract_contact_info(description, links) == "hello@example.com"
 
 
 def test_guess_language_defaults_to_english_for_ascii_text():
