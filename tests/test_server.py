@@ -122,6 +122,25 @@ def test_patch_lead_updates_editable_fields(client):
     assert leads[0]["notes"] == "Sent DM"
 
 
+def test_delete_lead_route_removes_row(client):
+    channel = ChannelData(name="X", channel_url="https://www.youtube.com/@x")
+    with patch("app.server.resolve_channel", return_value=channel), \
+         patch("app.server.score_fit_llm", side_effect=Exception("no key")):
+        client.post("/api/channels", json={"inputs": ["@x"]})
+    lead_id = client.get("/api/leads").get_json()[0]["id"]
+
+    resp = client.delete(f"/api/leads/{lead_id}")
+    assert resp.status_code == 200
+
+    leads = client.get("/api/leads").get_json()
+    assert leads == []
+
+
+def test_delete_lead_route_is_a_no_op_for_a_nonexistent_id(client):
+    resp = client.delete("/api/leads/999999")
+    assert resp.status_code == 200
+
+
 def test_export_route_returns_downloadable_file(client):
     channel = ChannelData(name="X", channel_url="https://www.youtube.com/@x")
     with patch("app.server.resolve_channel", return_value=channel), \

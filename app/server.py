@@ -56,6 +56,12 @@ def create_app(db_path: str) -> Flask:
         db.update_lead_fields(conn, lead_id, request.get_json(force=True) or {})
         return jsonify({"ok": True})
 
+    @app.route("/api/leads/<int:lead_id>", methods=["DELETE"])
+    def delete_lead_route(lead_id):
+        conn = get_conn()
+        db.delete_lead(conn, lead_id)
+        return jsonify({"ok": True})
+
     @app.route("/api/channels", methods=["POST"])
     def submit_channels_route():
         conn = get_conn()

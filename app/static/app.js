@@ -42,6 +42,7 @@ function renderRow(lead) {
     <td class="status-cell"></td>
     <td class="outreach-cell"></td>
     <td class="notes-cell"><input type="text" value="${escapeHtml(lead.notes || "")}"></td>
+    <td class="delete-cell"></td>
   `;
 
   const languageSelect = document.createElement("select");
@@ -80,6 +81,12 @@ function renderRow(lead) {
   const notesInput = tr.querySelector(".notes-cell input");
   notesInput.addEventListener("change", () => patchLead(lead.id, { notes: notesInput.value }));
 
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.textContent = "Delete";
+  deleteBtn.addEventListener("click", () => deleteLead(lead.id, lead.name || lead.channel_url));
+  tr.querySelector(".delete-cell").appendChild(deleteBtn);
+
   return tr;
 }
 
@@ -96,6 +103,12 @@ async function patchLead(id, fields) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(fields),
   });
+}
+
+async function deleteLead(id, label) {
+  if (!window.confirm(`Delete "${label}" from the tracker? This cannot be undone.`)) return;
+  await fetch(`/api/leads/${id}`, { method: "DELETE" });
+  await loadLeads();
 }
 
 document.getElementById("submitBtn").addEventListener("click", async () => {

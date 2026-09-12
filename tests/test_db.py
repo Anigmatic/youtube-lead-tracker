@@ -42,6 +42,22 @@ def test_update_lead_fields_only_touches_allowed_fields(conn):
     assert leads[0]["name"] == "Y"
 
 
+def test_delete_lead_removes_row(conn):
+    lead_id = db.upsert_lead(conn, {"channel_url": "https://www.youtube.com/@deleteme", "name": "Delete Me"})
+    db.upsert_lead(conn, {"channel_url": "https://www.youtube.com/@keepme", "name": "Keep Me"})
+    db.delete_lead(conn, lead_id)
+    leads = db.list_leads(conn)
+    assert len(leads) == 1
+    assert leads[0]["name"] == "Keep Me"
+
+
+def test_delete_lead_is_a_no_op_for_a_nonexistent_id(conn):
+    db.upsert_lead(conn, {"channel_url": "https://www.youtube.com/@keepme", "name": "Keep Me"})
+    db.delete_lead(conn, 999999)
+    leads = db.list_leads(conn)
+    assert len(leads) == 1
+
+
 def test_get_settings_returns_defaults_when_unset(conn):
     settings = db.get_settings(conn)
     assert settings["youtube_api_key"] == ""

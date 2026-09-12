@@ -98,6 +98,11 @@ def list_leads(conn: sqlite3.Connection) -> list:
     return [dict(row) for row in rows]
 
 
+def delete_lead(conn: sqlite3.Connection, lead_id: int) -> None:
+    conn.execute("DELETE FROM leads WHERE id = ?", (lead_id,))
+    conn.commit()
+
+
 def update_lead_fields(conn: sqlite3.Connection, lead_id: int, fields: dict) -> None:
     updates = {k: v for k, v in fields.items() if k in _UPDATABLE_FIELDS}
     if not updates:
