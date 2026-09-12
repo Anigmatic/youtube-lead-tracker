@@ -110,6 +110,16 @@ def test_resolve_channel_uses_structured_links_when_description_has_no_contact()
     assert result.links == ["testchannel.com", "twitter.com/testchannel"]
 
 
+def test_resolve_channel_captures_multiple_description_emails_when_no_links_panel():
+    about = dict(_ABOUT)
+    about["description"] = "Business email: a@x.com\nPersonal email: b@x.com"
+    about["links"] = ["a@x.com", "b@x.com"]
+    with _patch_scrape(about=about):
+        result = resolve_channel("@testchannel", _CONFIG)
+    assert result.contact_info == "a@x.com"
+    assert result.links == ["a@x.com", "b@x.com"]
+
+
 def test_resolve_channel_links_defaults_to_empty_list_when_none_found():
     with _patch_scrape():
         result = resolve_channel("@testchannel", _CONFIG)

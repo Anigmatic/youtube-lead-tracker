@@ -118,7 +118,7 @@ def parse_about_page(data: dict) -> dict:
         "channel_url": cmr.get("channelUrl") or f"https://www.youtube.com/channel/{channel_id}",
         "subscriber_count_text": subscriber_count_text,
         "description": cmr.get("description", ""),
-        "links": _extract_about_links(data),
+        "links": _extract_about_links(data) or _extract_description_links(cmr.get("description", "")),
     }
 
 
@@ -155,6 +155,28 @@ def _extract_about_links(data: dict) -> list:
         if content:
             contents.append(content)
     return contents
+
+
+def _extract_description_links(description: str) -> list:
+    """Fallback for channels with no structured "Links" panel: pull every
+    email and non-YouTube URL out of the free-text description, in the
+    order they appear. Some channels (e.g. a business + a personal email)
+    list more than one contact point in the description with nothing in
+    the structured Links section at all — extract_contact_info only ever
+    picks the single best guess for Contact Info, so this is what feeds
+    the full Links column for those channels."""
+    found = []
+    for email in _EMAIL_RE.findall(description):
+        if email not in found:
+            found.append(email)
+    for line in description.splitlines():
+        line = line.strip()
+        if not line or "youtube.com" in line.lower() or _EMAIL_RE.search(line):
+            continue
+        url_match = _URL_RE.search(line)
+        if url_match and url_match.group(0) not in found:
+            found.append(url_match.group(0))
+    return found
 
 
 def extract_contact_info(description: str, links: list = None) -> str:

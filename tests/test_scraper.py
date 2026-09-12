@@ -69,13 +69,6 @@ def test_parse_about_page_raises_on_missing_metadata():
         parse_about_page({"metadata": {}})
 
 
-def test_parse_about_page_has_no_links_when_none_present():
-    html = _load_fixture("about_page.html")
-    data = extract_yt_initial_data(html)
-    about = parse_about_page(data)
-    assert about["links"] == []
-
-
 def test_parse_about_page_extracts_structured_links_section():
     html = _load_fixture("about_page_with_links.html")
     data = extract_yt_initial_data(html)
@@ -83,6 +76,15 @@ def test_parse_about_page_extracts_structured_links_section():
     assert about["links"] == ["testchannel.com", "twitter.com/testchannel"]
     assert about["name"] == "Test Channel"
     assert about["subscriber_count_text"] == "5.65K subscribers"
+
+
+def test_parse_about_page_falls_back_to_description_links_when_no_links_panel():
+    html = _load_fixture("about_page.html")
+    data = extract_yt_initial_data(html)
+    about = parse_about_page(data)
+    # about_page.html has no structured Links panel, but its description
+    # contains "contact@testchannel.com" - that should end up in links too.
+    assert about["links"] == ["contact@testchannel.com"]
 
 
 def test_extract_contact_info_finds_email():
@@ -103,6 +105,25 @@ def test_extract_contact_info_uses_structured_links_when_description_has_none():
     description = "We make videos about testing things. No contact info here."
     links = ["testchannel.com", "twitter.com/testchannel"]
     assert extract_contact_info(description, links) == "testchannel.com"
+
+
+def test_parse_about_page_captures_multiple_emails_from_description_into_links():
+    data = {
+        "metadata": {
+            "channelMetadataRenderer": {
+                "title": "Anabolic Stick",
+                "description": (
+                    "Helping you navigate the treacherous world of fitness and bodybuilding.\n\n\n"
+                    "Business email: anabolicstick@blackbulb.com\n"
+                    "Personal email: anabolicstick@gmail.com\n"
+                ),
+                "externalId": "UCanabolic123",
+                "channelUrl": "http://www.youtube.com/channel/UCanabolic123",
+            }
+        }
+    }
+    about = parse_about_page(data)
+    assert about["links"] == ["anabolicstick@blackbulb.com", "anabolicstick@gmail.com"]
 
 
 def test_extract_contact_info_prefers_email_over_structured_links():
