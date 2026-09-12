@@ -3,6 +3,7 @@ const channelInput = document.getElementById("channelInput");
 const statusMsg = document.getElementById("statusMsg");
 const settingsDialog = document.getElementById("settingsDialog");
 const settingsForm = document.getElementById("settingsForm");
+const submitBtn = document.getElementById("submitBtn");
 
 const STATUS_OPTIONS = ["New", "Contacted", "Replied", "Not Interested", "Closed"];
 const OUTREACH_OPTIONS = ["Email", "YouTube Comment", "Instagram DM", "Other"];
@@ -10,6 +11,7 @@ const LANGUAGE_OPTIONS = [
   "English", "Unknown", "Spanish", "Portuguese", "French", "German",
   "Hindi", "Arabic", "Japanese", "Korean", "Chinese", "Other",
 ];
+const EMPTY_TABLE_COLUMNS = 12;
 
 function escapeHtml(value) {
   const div = document.createElement("div");
@@ -22,26 +24,40 @@ function escapeHtml(value) {
   return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+function renderEmptyRow() {
+  const tr = document.createElement("tr");
+  tr.className = "empty-row";
+  const td = document.createElement("td");
+  td.colSpan = EMPTY_TABLE_COLUMNS;
+  td.textContent = "No leads yet — paste a channel URL or @handle above to get started.";
+  tr.appendChild(td);
+  return tr;
+}
+
 function renderRow(lead) {
   const tr = document.createElement("tr");
   tr.dataset.fit = lead.fit_assessment || "";
   tr.dataset.id = lead.id;
 
-  const nameCell = `<a href="${escapeHtml(lead.channel_url)}" target="_blank">${escapeHtml(lead.name || lead.channel_url)}</a>`;
-  const fitCell = `${escapeHtml(lead.fit_assessment || "")} - ${escapeHtml(lead.fit_reason || "")}`;
+  const nameCell = `<a href="${escapeHtml(lead.channel_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(lead.name || lead.channel_url)}</a>`;
+  const contactValue = lead.contact_info || "";
+  const linksValue = lead.links || "";
 
   tr.innerHTML = `
     <td>${escapeHtml(lead.date || "")}</td>
     <td class="language-cell"></td>
-    <td>${nameCell}</td>
+    <td class="name-cell">${nameCell}</td>
     <td>${escapeHtml(lead.subscriber_count_display || "")}</td>
     <td>${escapeHtml(lead.avg_views_display || "")}</td>
-    <td>${escapeHtml(lead.contact_info || "")}</td>
-    <td>${escapeHtml(lead.links || "")}</td>
-    <td class="fit">${fitCell}</td>
+    <td class="truncate" title="${escapeHtml(contactValue)}">${escapeHtml(contactValue)}</td>
+    <td class="truncate" title="${escapeHtml(linksValue)}">${escapeHtml(linksValue)}</td>
+    <td class="fit-cell">
+      <span class="fit-badge" data-fit="${escapeHtml(lead.fit_assessment || "")}">${escapeHtml(lead.fit_assessment || "Unscored")}</span>
+      <span class="fit-reason">${escapeHtml(lead.fit_reason || "")}</span>
+    </td>
     <td class="status-cell"></td>
     <td class="outreach-cell"></td>
-    <td class="notes-cell"><input type="text" value="${escapeHtml(lead.notes || "")}"></td>
+    <td class="notes-cell"><input type="text" placeholder="Add a note…" value="${escapeHtml(lead.notes || "")}"></td>
     <td class="delete-cell"></td>
   `;
 
@@ -83,6 +99,7 @@ function renderRow(lead) {
 
   const deleteBtn = document.createElement("button");
   deleteBtn.type = "button";
+  deleteBtn.className = "row-delete-btn danger-ghost";
   deleteBtn.textContent = "Delete";
   deleteBtn.addEventListener("click", () => deleteLead(lead.id, lead.name || lead.channel_url));
   tr.querySelector(".delete-cell").appendChild(deleteBtn);
@@ -94,6 +111,10 @@ async function loadLeads() {
   const resp = await fetch("/api/leads");
   const leads = await resp.json();
   leadsBody.innerHTML = "";
+  if (!leads.length) {
+    leadsBody.appendChild(renderEmptyRow());
+    return;
+  }
   leads.forEach((lead) => leadsBody.appendChild(renderRow(lead)));
 }
 
@@ -111,21 +132,33 @@ async function deleteLead(id, label) {
   await loadLeads();
 }
 
-document.getElementById("submitBtn").addEventListener("click", async () => {
+function setStatus(html, isError) {
+  statusMsg.innerHTML = html;
+  statusMsg.classList.toggle("is-error", Boolean(isError));
+}
+
+submitBtn.addEventListener("click", async () => {
   const inputs = channelInput.value.split("\n").map((s) => s.trim()).filter(Boolean);
   if (!inputs.length) return;
-  statusMsg.textContent = "Processing...";
-  const resp = await fetch("/api/channels", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ inputs }),
-  });
-  if (resp.ok) {
-    channelInput.value = "";
-    statusMsg.textContent = "Done.";
-    await loadLeads();
-  } else {
-    statusMsg.textContent = "Error processing channels.";
+  submitBtn.disabled = true;
+  setStatus(`<span class="spinner"></span> Processing ${inputs.length} channel${inputs.length > 1 ? "s" : ""}…`, false);
+  try {
+    const resp = await fetch("/api/channels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ inputs }),
+    });
+    if (resp.ok) {
+      channelInput.value = "";
+      setStatus("Done.", false);
+      await loadLeads();
+    } else {
+      setStatus("Error processing channels.", true);
+    }
+  } catch (err) {
+    setStatus("Error processing channels.", true);
+  } finally {
+    submitBtn.disabled = false;
   }
 });
 

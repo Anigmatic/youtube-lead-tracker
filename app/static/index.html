@@ -2,45 +2,66 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>YouTube Lead Tracker</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <h1>YouTube Lead Tracker</h1>
-    <button id="settingsBtn">Settings</button>
-    <button id="exportBtn">Export</button>
-    <button id="clearAllBtn">Clear All</button>
+    <div class="logomark" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 3.5L12.5 8L5 12.5V3.5Z" fill="#0c0a1c"/>
+      </svg>
+    </div>
+    <div class="header-titles">
+      <h1>YouTube Lead Tracker</h1>
+      <div class="header-subtitle">Scrape channels, score fit, and manage outreach in one place</div>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="ghost" id="settingsBtn">Settings</button>
+      <button type="button" class="ghost" id="exportBtn">Export</button>
+      <button type="button" class="danger-ghost" id="clearAllBtn">Clear All</button>
+    </div>
   </header>
 
-  <section id="inputPanel">
-    <textarea id="channelInput" placeholder="Paste one channel URL/handle per line (or a single one)"></textarea>
-    <button id="submitBtn">Add Channel(s)</button>
-    <span id="statusMsg"></span>
+  <section id="inputPanel" class="panel">
+    <div class="input-main">
+      <textarea id="channelInput" placeholder="Paste one channel URL/handle per line (or a single one)"></textarea>
+      <div class="input-hint">Accepts full URLs, @handles, or bare channel names — one per line for bulk submission.</div>
+    </div>
+    <div class="input-actions">
+      <button type="button" class="primary" id="submitBtn">Add Channel(s)</button>
+      <span id="statusMsg"></span>
+    </div>
   </section>
 
-  <table id="leadsTable">
-    <thead>
-      <tr>
-        <th>Date</th><th>Language</th><th>Name</th><th>Subscribers</th>
-        <th>Avg Views/Video</th><th>Contact Info</th><th>Links</th><th>Fit Assessment</th>
-        <th>Status</th><th>Outreach Method</th><th>Notes</th><th></th>
-      </tr>
-    </thead>
-    <tbody id="leadsBody"></tbody>
-  </table>
+  <div class="table-scroll">
+    <table id="leadsTable">
+      <thead>
+        <tr>
+          <th>Date</th><th>Language</th><th>Name</th><th>Subscribers</th>
+          <th>Avg Views/Video</th><th>Contact Info</th><th>Links</th><th>Fit Assessment</th>
+          <th>Status</th><th>Outreach Method</th><th>Notes</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="leadsBody"></tbody>
+    </table>
+  </div>
 
   <dialog id="settingsDialog">
+    <h2>Settings</h2>
     <form id="settingsForm">
-      <label>YouTube Data API key (optional) <input type="text" name="youtube_api_key"></label>
-      <label>LLM API key (optional, e.g. Groq) <input type="text" name="llm_api_key"></label>
+      <label>YouTube Data API key (optional) <input type="text" name="youtube_api_key" placeholder="Leave blank to use scrape-only stats"></label>
+      <label>LLM API key (optional, e.g. Groq) <input type="text" name="llm_api_key" placeholder="Leave blank to use rule-based fit scoring"></label>
       <label>LLM model <input type="text" name="llm_model"></label>
-      <label>Niche keywords (comma-separated) <input type="text" name="niche_keywords"></label>
+      <label>Niche keywords (comma-separated) <input type="text" name="niche_keywords" placeholder="ai, smma, growth"></label>
       <label>Target subscriber min <input type="number" name="target_sub_min"></label>
       <label>Target subscriber max <input type="number" name="target_sub_max"></label>
       <label>Ideal lead description <textarea name="ideal_lead_description"></textarea></label>
-      <button type="submit">Save</button>
-      <button type="button" id="closeSettingsBtn">Close</button>
+      <div class="dialog-actions">
+        <button type="submit" class="primary">Save</button>
+        <button type="button" class="ghost" id="closeSettingsBtn">Close</button>
+      </div>
     </form>
   </dialog>
 
