@@ -133,6 +133,14 @@ document.getElementById("exportBtn").addEventListener("click", () => {
   window.location.href = "/api/export?format=xlsx";
 });
 
+document.getElementById("clearAllBtn").addEventListener("click", async () => {
+  const leads = await (await fetch("/api/leads")).json();
+  if (!leads.length) return;
+  if (!window.confirm(`Delete all ${leads.length} lead(s) from the tracker? This cannot be undone.`)) return;
+  await fetch("/api/leads", { method: "DELETE" });
+  await loadLeads();
+});
+
 document.getElementById("settingsBtn").addEventListener("click", async () => {
   const resp = await fetch("/api/settings");
   const settings = await resp.json();

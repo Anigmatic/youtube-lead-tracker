@@ -51,6 +51,18 @@ def test_delete_lead_removes_row(conn):
     assert leads[0]["name"] == "Keep Me"
 
 
+def test_clear_leads_removes_all_rows(conn):
+    db.upsert_lead(conn, {"channel_url": "https://www.youtube.com/@a", "name": "A"})
+    db.upsert_lead(conn, {"channel_url": "https://www.youtube.com/@b", "name": "B"})
+    db.clear_leads(conn)
+    assert db.list_leads(conn) == []
+
+
+def test_clear_leads_is_a_no_op_on_an_empty_table(conn):
+    db.clear_leads(conn)
+    assert db.list_leads(conn) == []
+
+
 def test_delete_lead_is_a_no_op_for_a_nonexistent_id(conn):
     db.upsert_lead(conn, {"channel_url": "https://www.youtube.com/@keepme", "name": "Keep Me"})
     db.delete_lead(conn, 999999)

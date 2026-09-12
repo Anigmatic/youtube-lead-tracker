@@ -141,6 +141,19 @@ def test_delete_lead_route_is_a_no_op_for_a_nonexistent_id(client):
     assert resp.status_code == 200
 
 
+def test_clear_leads_route_removes_all_rows(client):
+    channel_1 = ChannelData(name="A", channel_url="https://www.youtube.com/@a")
+    channel_2 = ChannelData(name="B", channel_url="https://www.youtube.com/@b")
+    with patch("app.server.resolve_channel", side_effect=[channel_1, channel_2]), \
+         patch("app.server.score_fit_llm", side_effect=Exception("no key")):
+        client.post("/api/channels", json={"inputs": ["@a", "@b"]})
+    assert len(client.get("/api/leads").get_json()) == 2
+
+    resp = client.delete("/api/leads")
+    assert resp.status_code == 200
+    assert client.get("/api/leads").get_json() == []
+
+
 def test_export_route_returns_downloadable_file(client):
     channel = ChannelData(name="X", channel_url="https://www.youtube.com/@x")
     with patch("app.server.resolve_channel", return_value=channel), \
