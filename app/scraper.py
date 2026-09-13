@@ -239,14 +239,21 @@ def parse_videos_page(data: dict, max_videos: int = 10) -> list:
         except (KeyError, IndexError):
             continue
 
+        # Some channels prepend an extra metadata row (e.g. a podcast/series
+        # co-branding label) before the real views/upload-age row, so the
+        # views/"ago" text isn't reliably in metadataRows[0] - scan every
+        # row rather than assuming position. Verified live against
+        # @shaardulogy, whose "* | Master Vani Kabir" collab label pushed
+        # the real "47K views" / "8 days ago" row to metadataRows[1].
         view_text, published_text = "", ""
-        for part in rows[0].get("metadataParts", []):
-            content = part.get("text", {}).get("content", "")
-            lc = content.lower()
-            if "view" in lc:
-                view_text = content
-            elif "ago" in lc:
-                published_text = content
+        for row in rows:
+            for part in row.get("metadataParts", []):
+                content = part.get("text", {}).get("content", "")
+                lc = content.lower()
+                if "view" in lc and not view_text:
+                    view_text = content
+                elif "ago" in lc and not published_text:
+                    published_text = content
 
         videos.append({
             "video_id": lockup.get("contentId", ""),

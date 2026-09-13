@@ -149,8 +149,15 @@ submitBtn.addEventListener("click", async () => {
       body: JSON.stringify({ inputs }),
     });
     if (resp.ok) {
+      const body = await resp.json();
       channelInput.value = "";
-      setStatus("Done.", false);
+      const skippedCount = (body.skipped || []).length;
+      if (skippedCount) {
+        const names = body.skipped.map((s) => s.name || s.channel_url).join(", ");
+        setStatus(`Done. Skipped ${skippedCount} outside your subscriber range: ${escapeHtml(names)}.`, false);
+      } else {
+        setStatus("Done.", false);
+      }
       await loadLeads();
     } else {
       setStatus("Error processing channels.", true);

@@ -144,7 +144,7 @@ def test_parse_videos_page_extracts_recent_videos_in_order():
     html = _load_fixture("videos_page.html")
     data = extract_yt_initial_data(html)
     videos = parse_videos_page(data)
-    assert len(videos) == 3
+    assert len(videos) == 4
     assert videos[0] == {
         "video_id": "vid001",
         "title": "First Video",
@@ -155,11 +155,34 @@ def test_parse_videos_page_extracts_recent_videos_in_order():
     assert videos[2]["published_text"] == "3 months ago"
 
 
+def test_parse_videos_page_finds_views_and_age_behind_an_extra_metadata_row():
+    # Verified live against @shaardulogy: some videos carry an extra
+    # "collab/series" label as metadataRows[0], pushing the real
+    # views/upload-age row to metadataRows[1]. Only scanning rows[0] (the
+    # original bug) silently dropped these videos' stats to "", which fed
+    # a wrong "no recent uploads in 60+ days" fit verdict even though the
+    # channel had uploaded days ago.
+    html = _load_fixture("videos_page.html")
+    data = extract_yt_initial_data(html)
+    videos = parse_videos_page(data)
+    fourth = videos[3]
+    assert fourth["video_id"] == "vid004"
+    assert fourth["view_count_text"] == "47K views"
+    assert fourth["published_text"] == "8 days ago"
+
+
 def test_parse_videos_page_respects_max_videos():
     html = _load_fixture("videos_page.html")
     data = extract_yt_initial_data(html)
     videos = parse_videos_page(data, max_videos=2)
     assert len(videos) == 2
+
+
+def test_parse_videos_page_max_videos_default_still_covers_all_fixture_videos():
+    html = _load_fixture("videos_page.html")
+    data = extract_yt_initial_data(html)
+    videos = parse_videos_page(data, max_videos=10)
+    assert len(videos) == 4
 
 
 def test_parse_videos_page_raises_when_videos_tab_missing():
@@ -208,7 +231,7 @@ def test_scrape_channel_combines_about_and_videos():
         result = scrape_channel("@testchannel")
 
     assert result["about"]["name"] == "Test Channel"
-    assert len(result["videos"]) == 3
+    assert len(result["videos"]) == 4
 
 
 def test_scrape_channel_returns_partial_when_videos_tab_fails_to_parse():

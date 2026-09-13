@@ -52,7 +52,7 @@ def test_submit_channels_resolves_and_scores_and_stores(client):
          patch("app.server.score_fit_llm", side_effect=Exception("no key")):
         resp = client.post("/api/channels", json={"inputs": ["@aigrowth"]})
     assert resp.status_code == 200
-    body = resp.get_json()
+    body = resp.get_json()["leads"]
     assert len(body) == 1
     assert body[0]["name"] == "AI Growth Integrator"
     assert body[0]["fit_assessment"] in {"High", "Moderate", "Low"}
@@ -66,7 +66,7 @@ def test_submit_channels_records_error_row_when_resolution_fails(client):
     error_channel = ChannelData(error="Could not locate ytInitialData in page")
     with patch("app.server.resolve_channel", return_value=error_channel):
         resp = client.post("/api/channels", json={"inputs": ["@badhandle"]})
-    body = resp.get_json()
+    body = resp.get_json()["leads"]
     assert len(body) == 1
     assert "Could not resolve channel" in body[0]["fit_reason"]
 
@@ -85,7 +85,7 @@ def test_submit_channels_continues_batch_when_one_input_raises(client):
         )
 
     assert resp.status_code == 200
-    body = resp.get_json()
+    body = resp.get_json()["leads"]
     assert len(body) == 3
     assert body[0]["name"] == "Good 1"
     assert "Could not resolve channel:" in body[1]["fit_reason"]
@@ -95,12 +95,50 @@ def test_submit_channels_continues_batch_when_one_input_raises(client):
     assert len(leads) == 3
 
 
+def test_submit_channels_skips_channel_outside_subscriber_range(client):
+    client.post("/api/settings", json={"target_sub_min": 1000, "target_sub_max": 100000})
+    too_big = ChannelData(
+        name="Mega Channel", channel_url="https://www.youtube.com/@mega", subscriber_count=8_000_000,
+        subscriber_count_display="8M",
+    )
+    in_range = ChannelData(
+        name="Right-Sized Channel", channel_url="https://www.youtube.com/@right", subscriber_count=50_000,
+        subscriber_count_display="50K",
+    )
+    with patch("app.server.resolve_channel", side_effect=[too_big, in_range]), \
+         patch("app.server.score_fit_llm", side_effect=Exception("no key")):
+        resp = client.post("/api/channels", json={"inputs": ["@mega", "@right"]})
+
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert len(body["leads"]) == 1
+    assert body["leads"][0]["name"] == "Right-Sized Channel"
+    assert len(body["skipped"]) == 1
+    assert body["skipped"][0]["name"] == "Mega Channel"
+    assert "outside your configured target range" in body["skipped"][0]["reason"]
+
+    leads = client.get("/api/leads").get_json()
+    assert len(leads) == 1
+    assert leads[0]["name"] == "Right-Sized Channel"
+
+
+def test_submit_channels_does_not_skip_when_range_is_default(client):
+    channel = ChannelData(name="X", channel_url="https://www.youtube.com/@x", subscriber_count=8_000_000)
+    with patch("app.server.resolve_channel", return_value=channel), \
+         patch("app.server.score_fit_llm", side_effect=Exception("no key")):
+        resp = client.post("/api/channels", json={"inputs": ["@x"]})
+
+    body = resp.get_json()
+    assert len(body["leads"]) == 1
+    assert body["skipped"] == []
+
+
 def test_submit_channels_sets_status_new_for_successfully_resolved_lead(client):
     channel = ChannelData(name="X", channel_url="https://www.youtube.com/@x")
     with patch("app.server.resolve_channel", return_value=channel), \
          patch("app.server.score_fit_llm", side_effect=Exception("no key")):
         resp = client.post("/api/channels", json={"inputs": ["@x"]})
-    body = resp.get_json()
+    body = resp.get_json()["leads"]
     assert body[0]["status"] == "New"
 
     leads = client.get("/api/leads").get_json()

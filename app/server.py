@@ -74,7 +74,10 @@ def create_app(db_path: str) -> Flask:
         body = request.get_json(force=True) or {}
         inputs = [s.strip() for s in body.get("inputs", []) if s.strip()]
         config = db.get_settings(conn)
+        sub_min = config.get("target_sub_min", 0)
+        sub_max = config.get("target_sub_max", 10 ** 9)
         results = []
+        skipped = []
         for raw_input in inputs:
             try:
                 channel = resolve_channel(raw_input, config)
@@ -84,6 +87,16 @@ def create_app(db_path: str) -> Flask:
                         "name": raw_input,
                         "fit_reason": f"Could not resolve channel: {channel.error}",
                     }
+                elif not (sub_min <= channel.subscriber_count <= sub_max):
+                    skipped.append({
+                        "channel_url": channel.channel_url,
+                        "name": channel.name,
+                        "subscriber_count": channel.subscriber_count,
+                        "subscriber_count_display": channel.subscriber_count_display,
+                        "reason": f"{channel.subscriber_count_display} subscribers is outside your configured "
+                                  f"target range ({sub_min}-{sub_max}).",
+                    })
+                    continue
                 else:
                     try:
                         level, reason = score_fit_llm(channel, config)
@@ -115,7 +128,7 @@ def create_app(db_path: str) -> Flask:
             lead_id = db.upsert_lead(conn, lead)
             row = conn.execute("SELECT * FROM leads WHERE id = ?", (lead_id,)).fetchone()
             results.append(dict(row))
-        return jsonify(results)
+        return jsonify({"leads": results, "skipped": skipped})
 
     @app.route("/api/export")
     def export_route():
