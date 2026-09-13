@@ -203,6 +203,56 @@ def test_export_route_returns_downloadable_file(client):
     assert resp.headers["Content-Disposition"].startswith("attachment")
 
 
+def test_get_leads_hides_channels_outside_a_range_set_after_they_were_added(client):
+    small = ChannelData(name="Small", channel_url="https://www.youtube.com/@small", subscriber_count=50_000,
+                         subscriber_count_display="50K")
+    huge = ChannelData(name="Huge", channel_url="https://www.youtube.com/@huge", subscriber_count=8_000_000,
+                        subscriber_count_display="8M")
+    with patch("app.server.resolve_channel", side_effect=[small, huge]), \
+         patch("app.server.score_fit_llm", side_effect=Exception("no key")):
+        client.post("/api/channels", json={"inputs": ["@small", "@huge"]})
+
+    # Both stored while the range was still the wide default.
+    assert len(client.get("/api/leads").get_json()) == 2
+
+    # Narrowing the range afterward hides Huge without deleting it.
+    client.post("/api/settings", json={"target_sub_min": 1000, "target_sub_max": 100_000})
+    leads = client.get("/api/leads").get_json()
+    assert [lead["name"] for lead in leads] == ["Small"]
+
+    # Widening it again brings Huge back - it was hidden, not removed.
+    client.post("/api/settings", json={"target_sub_min": 0, "target_sub_max": 10_000_000})
+    leads = client.get("/api/leads").get_json()
+    assert {lead["name"] for lead in leads} == {"Small", "Huge"}
+
+
+def test_export_excludes_channels_outside_the_configured_subscriber_range(client):
+    small = ChannelData(name="Small", channel_url="https://www.youtube.com/@small", subscriber_count=50_000,
+                         subscriber_count_display="50K")
+    huge = ChannelData(name="Huge", channel_url="https://www.youtube.com/@huge", subscriber_count=8_000_000,
+                        subscriber_count_display="8M")
+    with patch("app.server.resolve_channel", side_effect=[small, huge]), \
+         patch("app.server.score_fit_llm", side_effect=Exception("no key")):
+        client.post("/api/channels", json={"inputs": ["@small", "@huge"]})
+    client.post("/api/settings", json={"target_sub_min": 1000, "target_sub_max": 100_000})
+
+    resp = client.get("/api/export?format=csv")
+    body = resp.get_data(as_text=True)
+    assert "Small" in body
+    assert "Huge" not in body
+
+
+def test_get_leads_still_shows_unresolved_error_rows_when_range_is_narrow(client):
+    error_channel = ChannelData(error="Could not locate ytInitialData in page")
+    with patch("app.server.resolve_channel", return_value=error_channel):
+        client.post("/api/channels", json={"inputs": ["@badhandle"]})
+    client.post("/api/settings", json={"target_sub_min": 1000, "target_sub_max": 100_000})
+
+    leads = client.get("/api/leads").get_json()
+    assert len(leads) == 1
+    assert "Could not resolve channel" in leads[0]["fit_reason"]
+
+
 def test_leads_endpoint_works_across_real_threads(tmp_path):
     app = create_app(str(tmp_path / "thread_test.db"))
     client = app.test_client()

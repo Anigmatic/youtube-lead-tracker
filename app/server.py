@@ -48,7 +48,9 @@ def create_app(db_path: str) -> Flask:
     @app.route("/api/leads", methods=["GET"])
     def list_leads_route():
         conn = get_conn()
-        return jsonify(db.list_leads(conn))
+        config = db.get_settings(conn)
+        leads = db.list_leads(conn, config.get("target_sub_min", 0), config.get("target_sub_max", 10 ** 9))
+        return jsonify(leads)
 
     @app.route("/api/leads/<int:lead_id>", methods=["PATCH"])
     def update_lead_route(lead_id):
@@ -133,8 +135,9 @@ def create_app(db_path: str) -> Flask:
     @app.route("/api/export")
     def export_route():
         conn = get_conn()
+        config = db.get_settings(conn)
         fmt = request.args.get("format", "xlsx")
-        leads = db.list_leads(conn)
+        leads = db.list_leads(conn, config.get("target_sub_min", 0), config.get("target_sub_max", 10 ** 9))
         suffix = ".xlsx" if fmt == "xlsx" else ".csv"
         fd, path = tempfile.mkstemp(suffix=suffix)
         os.close(fd)

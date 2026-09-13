@@ -42,6 +42,39 @@ def test_update_lead_fields_only_touches_allowed_fields(conn):
     assert leads[0]["name"] == "Y"
 
 
+def test_list_leads_filters_by_subscriber_range(conn):
+    db.upsert_lead(conn, {
+        "channel_url": "https://www.youtube.com/@small", "name": "Small",
+        "subscriber_count": 50_000, "subscriber_count_display": "50K",
+    })
+    db.upsert_lead(conn, {
+        "channel_url": "https://www.youtube.com/@huge", "name": "Huge",
+        "subscriber_count": 8_000_000, "subscriber_count_display": "8M",
+    })
+    leads = db.list_leads(conn, sub_min=1000, sub_max=100_000)
+    assert [lead["name"] for lead in leads] == ["Small"]
+
+
+def test_list_leads_always_shows_unresolved_error_rows_regardless_of_range(conn):
+    db.upsert_lead(conn, {
+        "channel_url": "https://www.youtube.com/@small", "name": "Small",
+        "subscriber_count": 50_000, "subscriber_count_display": "50K",
+    })
+    db.upsert_lead(conn, {"channel_url": "https://www.youtube.com/@badhandle", "name": "@badhandle"})
+    leads = db.list_leads(conn, sub_min=1000, sub_max=10_000)
+    names = {lead["name"] for lead in leads}
+    assert names == {"@badhandle"}
+
+
+def test_list_leads_with_no_bounds_returns_everything(conn):
+    db.upsert_lead(conn, {
+        "channel_url": "https://www.youtube.com/@huge", "name": "Huge",
+        "subscriber_count": 8_000_000, "subscriber_count_display": "8M",
+    })
+    leads = db.list_leads(conn)
+    assert len(leads) == 1
+
+
 def test_delete_lead_removes_row(conn):
     lead_id = db.upsert_lead(conn, {"channel_url": "https://www.youtube.com/@deleteme", "name": "Delete Me"})
     db.upsert_lead(conn, {"channel_url": "https://www.youtube.com/@keepme", "name": "Keep Me"})

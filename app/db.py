@@ -93,8 +93,20 @@ def upsert_lead(conn: sqlite3.Connection, lead: dict) -> int:
     return lead_id
 
 
-def list_leads(conn: sqlite3.Connection) -> list:
-    rows = conn.execute("SELECT * FROM leads ORDER BY id DESC").fetchall()
+def list_leads(conn: sqlite3.Connection, sub_min: int = None, sub_max: int = None) -> list:
+    if sub_min is None and sub_max is None:
+        rows = conn.execute("SELECT * FROM leads ORDER BY id DESC").fetchall()
+    else:
+        # subscriber_count_display is only ever '' for a row that failed to
+        # resolve (it has no real stats at all) - always show those
+        # regardless of range, and only range-filter rows that actually
+        # have a subscriber count to compare.
+        rows = conn.execute(
+            "SELECT * FROM leads WHERE subscriber_count_display = '' "
+            "OR (subscriber_count >= ? AND subscriber_count <= ?) "
+            "ORDER BY id DESC",
+            (sub_min if sub_min is not None else 0, sub_max if sub_max is not None else 10 ** 9),
+        ).fetchall()
     return [dict(row) for row in rows]
 
 
