@@ -343,6 +343,44 @@ td.name-cell a:hover {
   white-space: nowrap;
 }
 
+.truncate a {
+  color: var(--accent-hover);
+  text-decoration: none;
+}
+
+.truncate a:hover {
+  text-decoration: underline;
+}
+
+.link-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 280px;
+}
+
+.link-chip {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  text-decoration: none;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.link-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+
 .empty-row td {
   padding: 2.5rem 1rem;
   text-align: center;

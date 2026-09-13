@@ -24,6 +24,30 @@ function escapeHtml(value) {
   return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function linkHref(raw) {
+  if (/^https?:\/\//i.test(raw) || /^mailto:/i.test(raw)) return raw;
+  if (EMAIL_RE.test(raw)) return `mailto:${raw}`;
+  return `https://${raw}`;
+}
+
+function renderContactCell(value) {
+  if (!value || value === "No clear contact") return escapeHtml(value || "");
+  const safeValue = escapeHtml(value);
+  return `<a href="${escapeHtml(linkHref(value))}" target="_blank" rel="noopener noreferrer" title="${safeValue}">${safeValue}</a>`;
+}
+
+function renderLinkChips(value) {
+  const items = (value || "").split(",").map((s) => s.trim()).filter(Boolean);
+  return items
+    .map((item) => {
+      const safeItem = escapeHtml(item);
+      return `<a href="${escapeHtml(linkHref(item))}" target="_blank" rel="noopener noreferrer" class="link-chip" title="${safeItem}">${safeItem}</a>`;
+    })
+    .join("");
+}
+
 function renderEmptyRow() {
   const tr = document.createElement("tr");
   tr.className = "empty-row";
@@ -49,8 +73,8 @@ function renderRow(lead) {
     <td class="name-cell">${nameCell}</td>
     <td>${escapeHtml(lead.subscriber_count_display || "")}</td>
     <td>${escapeHtml(lead.avg_views_display || "")}</td>
-    <td class="truncate" title="${escapeHtml(contactValue)}">${escapeHtml(contactValue)}</td>
-    <td class="truncate" title="${escapeHtml(linksValue)}">${escapeHtml(linksValue)}</td>
+    <td class="truncate">${renderContactCell(contactValue)}</td>
+    <td class="link-list">${renderLinkChips(linksValue)}</td>
     <td class="fit-cell">
       <span class="fit-badge" data-fit="${escapeHtml(lead.fit_assessment || "")}">${escapeHtml(lead.fit_assessment || "Unscored")}</span>
       <span class="fit-reason">${escapeHtml(lead.fit_reason || "")}</span>
